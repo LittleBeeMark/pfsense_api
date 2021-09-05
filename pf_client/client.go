@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/cookiejar"
 	"strconv"
 	"time"
 )
@@ -22,14 +23,18 @@ type Cl struct {
 	SetCookie   string
 }
 
+var GenCookieJar *cookiejar.Jar
 var Cli *http.Client
 
 func init() {
-	Cli = &http.Client{Transport: &http.Transport{
-		//Proxy: http.ProxyFromEnvironment,
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true},
-	}}
+	GenCookieJar, _ = cookiejar.New(nil)
+	Cli = &http.Client{
+		Jar: GenCookieJar,
+		Transport: &http.Transport{
+			//Proxy: http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true},
+		}}
 }
 
 const (
@@ -89,8 +94,8 @@ func (prov *Cl) Request(ctx context.Context,
 	}
 
 	//req.Header.Add(AuthHeader, prov.ClientToken)
-	//req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Content-Type", "multipart/form-data")
+	req.Header.Add("Content-Type", "application/json")
+	//req.Header.Add("Content-Type", "multipart/form-data")
 	req.Header.Add("Content-Length", strconv.Itoa(int(req.ContentLength)))
 
 	fmt.Println("======================= header :", req.Header)

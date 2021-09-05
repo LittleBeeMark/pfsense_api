@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"mime/multipart"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 )
@@ -51,7 +51,7 @@ func HaproxyIndex(i int) {
 	//	return
 	//}
 
-	coo, err := LoginHaproxy("sid:7c1df9a116c37f4235fae322edf31851f8a30938,1630676016;ip:d875c020b7ec055f979eaee60729c364ee9f8215,1630676016", "PHPSESSID=31683419d65650ddf6fc217a4c2a8687")
+	coo, err := LoginHaproxy("sid:02750c770c4aa60730b0793d367c36fce3603318,1630725723;ip:5a6d0e8dcc6cad6ea23818a0facb76f2681639da,1630725723", "PHPSESSID=0b19060f2979be8f80cfa03aec608163")
 	if err != nil {
 		fmt.Println("err ", err)
 		return
@@ -74,11 +74,39 @@ func HaproxyIndex(i int) {
 	//	fmt.Printf("%d: %s\n", i, content)
 	//})
 }
+func Index() error {
+	cl := Cl{
+		BaseUrl:     "http://192.168.252.183",
+		ClientToken: "pfsense",
+		ClientID:    "admin",
+	}
+
+	req, err := http.NewRequest(http.MethodGet, cl.BaseUrl, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := Cli.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	respBuf, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("respbuf : ", string(respBuf))
+
+	return nil
+
+}
 
 func LoginHaproxy(csrf, cookie string) (string, error) {
 
 	cl := Cl{
-		BaseUrl:     "https://192.168.252.183",
+		BaseUrl:     "http://192.168.252.183",
 		ClientToken: "pfsense",
 		ClientID:    "admin",
 	}
@@ -90,22 +118,33 @@ func LoginHaproxy(csrf, cookie string) (string, error) {
 	//	"login":        []string{"Sign In"},
 	//}
 
-	req, err := http.NewRequest("POST", cl.BaseUrl, nil)
+	//req.PostForm = url.Values{
+	//	"__csrf_magic": []string{csrf},
+	//	"usernamefld":  []string{"admin"},
+	//	"passwordfld":  []string{"pfsense"},
+	//	"login":        []string{"Sign In"},
+	//}
+	//
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	writer.WriteField("__csrf_magic", "sid:d6bef3607ccc9f7fadc8b1c62532682f60023c65,1630751389;ip:662905e4b2f984817d2dd0d30b54ca039ce09ba0,1630751389")
+	writer.WriteField("usernamefld", cl.ClientID)
+	writer.WriteField("passwordfld", cl.ClientToken)
+	writer.WriteField("login", "Sign In")
+
+	req, err := http.NewRequest(http.MethodPost, cl.BaseUrl, payload)
 	if err != nil {
 		return "", err
 	}
-	req.PostForm = url.Values{
-		"__csrf_magic": []string{csrf},
-		"usernamefld":  []string{"admin"},
-		"passwordfld":  []string{"pfsense"},
-		"login":        []string{"Sign In"},
-	}
-
 	fmt.Println(req.PostForm)
-	req.Header.Set("Cookie", cookie)
 	//s := fmt.Sprintf("multipart/form-data;boundary=%s", strconv.Itoa(int(req.ContentLength)))
-	req.Header.Set("Content-Type", "multipart/form-data")
-	req.Header.Set("Content-Length", strconv.Itoa(len(req.PostForm.Encode())))
+	//req.Header.Add("Content-Type", "multipart/form-data")
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Content-Length", strconv.Itoa(int(req.ContentLength)))
+	cook := http.Cookie{Name: "PHPSESSID", Value: "308e337bb77786ec087aea9243a16bec"}
+	req.AddCookie(&cook)
+	//req.Header.Add("PHPSESSID", "5af1e9f665bb25f442f3fb01ec03a503")
 	fmt.Println(req.Header)
 	resp, err := Cli.Do(req)
 	if err != nil {
@@ -113,6 +152,10 @@ func LoginHaproxy(csrf, cookie string) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	cs := GenCookieJar.Cookies(req.URL)
+	for _, c := range cs {
+		fmt.Println(c.Name, c.Value)
+	}
 	//payload := &bytes.Buffer{}
 	//writer := multipart.NewWriter(payload)
 	//writer.WriteField("__csrf_magic", csrf)
@@ -130,6 +173,7 @@ func LoginHaproxy(csrf, cookie string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	fmt.Println(resp.Header.Get("SetCookie"))
 
 	fmt.Println("err :", err)
 	fmt.Println("status code : ", resp.StatusCode)
@@ -139,7 +183,7 @@ func LoginHaproxy(csrf, cookie string) (string, error) {
 }
 func GetHaproxyList(cookie string) {
 	cl := Cl{
-		BaseUrl:     "https://192.168.252.183/haproxy/haproxy_listeners.php",
+		BaseUrl:     "http://192.168.252.183/haproxy/haproxy_listeners.php",
 		ClientToken: "pfsense",
 		ClientID:    "admin",
 	}

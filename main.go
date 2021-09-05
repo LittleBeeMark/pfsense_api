@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	cl := pf_client.Cl{
+	cl := pf_client. Cl{
 		BaseUrl:     "https://192.168.252.183/api/v1/",
 		ClientToken: "pfsense",
 		ClientID:    "admin",
