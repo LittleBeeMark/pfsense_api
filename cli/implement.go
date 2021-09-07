@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -106,6 +107,17 @@ var UnmarshalAPIBasic = NamedAction{
 	},
 }
 
+// GetCsrInfo doc
+func GetCsrfInfo(html string) (string, error) {
+	rel := regexp.MustCompile(`var csrfMagicToken = "(.*)";var csrfMagicName = "__csrf_magic"`)
+	ress := rel.FindAllString(html, -1)
+	if len(ress) <= 0 {
+		return "", errors.New("未找到 index 页的 Crsf")
+	}
+
+	return rel.ReplaceAllString(ress[0], "$1"), nil
+}
+
 // unmarshalIndexRespAction dco
 var unmarshalIndexRespAction = NamedAction{
 	Name: "pfsense.unmarshalIndexResp",
@@ -119,10 +131,9 @@ var unmarshalIndexRespAction = NamedAction{
 		}
 		//fmt.Println("string resp :", string(bodyBuf))
 
-		rel := regexp.MustCompile(`var csrfMagicToken = "(.*)";var csrfMagicName = "__csrf_magic"`)
-		ress := rel.FindAllString(string(bodyBuf), -1)
-		if len(ress) <= 0 {
-			r.Error = fmt.Errorf("未找到 index 页的 Crsf")
+		csrf, err := GetCsrfInfo(string(bodyBuf))
+		if err != nil {
+			r.Error = err
 			return
 		}
 
@@ -133,7 +144,7 @@ var unmarshalIndexRespAction = NamedAction{
 		}
 
 		out := map[string]interface{}{
-			RespInfoCSRF:      rel.ReplaceAllString(ress[0], "$1"),
+			RespInfoCSRF:      csrf,
 			RespInfoSetCookie: strings.Split(setCookie, ";")[0],
 		}
 

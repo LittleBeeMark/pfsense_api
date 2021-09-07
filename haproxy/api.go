@@ -76,3 +76,25 @@ func (hp *Haproxy) ModifyProxy(param *ModifyParamReq) (*map[string]interface{}, 
 	req := hp.NewRequest(op, nil, payload.Bytes(), output)
 	return output, req.Send()
 }
+
+// GetHaproxyListeners doc
+func (hp *Haproxy) GetHaproxyListeners(cookie string) (*map[string]interface{}, error) {
+	op := &cli.Operation{
+		HTTPMethod: "GET",
+		HTTPPath:   "/haproxy/haproxy_listeners.php",
+		Cookie:     cookie,
+	}
+
+	hp.ReqActions.Unmarshal.PushBackNamed(unmarshalHaproxyListRespAction)
+	hp.CliInfo.HTTPClient = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true},
+		}}
+
+	output := &map[string]interface{}{}
+
+	req := hp.NewRequest(op, nil, nil, output)
+	return output, req.Send()
+}
