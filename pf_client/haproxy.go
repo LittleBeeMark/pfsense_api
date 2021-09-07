@@ -7,37 +7,38 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
 func HaproxyIndex(i int) {
 
-	//cl := Cl{
-	//	BaseUrl:     "https://192.168.252.183",
-	//	ClientToken: "pfsense",
-	//	ClientID:    "admin",
-	//}
-	//var resp bytes.Buffer
-	//
-	//err := cl.Request(context.Background(), http.MethodGet, "", "", nil, &resp)
-	//if err != nil {
-	//	fmt.Println("err : ", err)
-	//	return
-	//}
-	//
-	//fmt.Println("============================== index  ========================================", resp.String())
+	cl := Cl{
+		BaseUrl:     "https://192.168.252.183",
+		ClientToken: "pfsense",
+		ClientID:    "admin",
+	}
+	var resp bytes.Buffer
 
-	//fmt.Println("resp", resp.String())
+	err := cl.Request(context.Background(), http.MethodGet, "", "", nil, &resp)
+	if err != nil {
+		fmt.Println("err : ", err)
+		return
+	}
+
+	fmt.Println("============================== index  ========================================", resp.String())
+
+	fmt.Println("resp", resp.String())
 
 	//var test = `var csrfMagicToken = "sid:dc9433ef8f2b7ead2f118ac1a125e4571528f1ab,1630574645;ip:rerasoera";var csrfMagicName = "__csrf_magic";`
 	//result2 := rel.ReplaceAllString(test, "$1")
 	//fmt.Println("result2 : ", result2)
 
-	//rel := regexp.MustCompile(`var csrfMagicToken = "(.*)";var csrfMagicName = "__csrf_magic"`)
-	//ress := rel.FindAllString(resp.String(), -1)
-	//result := rel.ReplaceAllString(ress[0], "$1")
-	//fmt.Println("ressult : ", result)
+	rel := regexp.MustCompile(`var csrfMagicToken = "(.*)";var csrfMagicName = "__csrf_magic"`)
+	ress := rel.FindAllString(resp.String(), -1)
+	result := rel.ReplaceAllString(ress[0], "$1")
+	fmt.Println("ressult : ", result)
 	//
 	//relCookie := strings.Split(cl.SetCookie, ";")
 	//fmt.Println("index cookie", relCookie[0])

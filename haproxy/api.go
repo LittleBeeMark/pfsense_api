@@ -1,114 +1,78 @@
 package haproxy
 
-import "pfsense/cli"
+import (
+	"bytes"
+	"crypto/tls"
+	"mime/multipart"
+	"net/http"
+	"pfsense/cli"
+)
 
+// Haproxy doc
 type Haproxy struct {
-	CliInfo    *cli.CliInfo
-	ReqActions *cli.ReqAction
+	*cli.PfSense
 }
 
 // NewHaproxy doc
 func NewHaproxy(userName, password, endPoint string) *Haproxy {
-	haproxy := &Haproxy{
-		CliInfo: &cli.CliInfo{
-			Crd: &cli.Credentials{
-				UserName: userName,
-				Password: password,
-			},
-			Endpoint: endPoint,
-		},
+	return &Haproxy{
+		cli.NewPfsense(userName, password, endPoint),
 	}
-
-	haproxy.ReqActions.Send.PushBackNamed(cli.SendAction)
-	return haproxy
 }
 
-// newRequest doc
-func (hp *Haproxy) newRequest(op *cli.Operation, retryer *cli.Retry, params, data interface{}) *cli.Request {
-	return cli.New(hp.CliInfo, hp.ReqActions, retryer, op, params, data)
-}
-
-// GetIndexReq doc
-func (hp *Haproxy) GetIndexReq(input *map[string]interface{}) (*map[string]interface{}, error) {
+// GetHaproxyList doc
+func (hp *Haproxy) GetHaproxyList(cookie string) (*map[string]interface{}, error) {
 	op := &cli.Operation{
 		HTTPMethod: "GET",
-		HTTPPath:   "/index.html",
+		HTTPPath:   "/haproxy/haproxy_listeners.php",
+		Cookie:     cookie,
 	}
 
-	if input == nil {
-		input = &map[string]interface{}{}
+	hp.ReqActions.Unmarshal.PushBackNamed(unmarshalHaproxyListRespAction)
+	hp.CliInfo.HTTPClient = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true},
+		}}
+
+	output := &map[string]interface{}{}
+
+	req := hp.NewRequest(op, nil, nil, output)
+	return output, req.Send()
+}
+
+// GetHaproxyInfo doc
+func (hp *Haproxy) GetHaproxyInfo(id, cookie string) (*map[string]interface{}, error) {
+	op := &cli.Operation{
+		HTTPMethod: "GET",
+		HTTPPath:   "/haproxy/haproxy_listeners_edit.php?id=mark",
+		Cookie:     cookie,
 	}
 
 	output := &map[string]interface{}{}
 
-	req := hp.newRequest(op, nil, input, output)
+	req := hp.NewRequest(op, nil, nil, output)
 	return output, req.Send()
 }
 
-// GetDomains doc
-func (hp *Haproxy) Login(input *map[string]interface{}) (*map[string]interface{}, error) {
+// ModifyParamReq doc
+type ModifyParamReq struct {
+	Csrf string
+}
+
+// ModifyProxy doc
+func (hp *Haproxy) ModifyProxy(param *ModifyParamReq) (*map[string]interface{}, error) {
 	op := &cli.Operation{
 		HTTPMethod: "POST",
 		HTTPPath:   "/",
 	}
 
-	if input == nil {
-		input = &map[string]interface{}{}
-	}
-
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	writer.WriteField("__csrf_magic", param.Csrf)
 	output := &map[string]interface{}{}
 
-	req := hp.newRequest(op, nil, input, output)
-	return output, req.Send()
-}
-
-// GetCertificatesRequest doc
-func (hp *Haproxy) GetHaproxyList(input *map[string]interface{}) (*map[string]interface{}, error) {
-	op := &cli.Operation{
-		HTTPMethod: "POST",
-		HTTPPath:   "/",
-	}
-
-	if input == nil {
-		input = &map[string]interface{}{}
-	}
-
-	output := &map[string]interface{}{}
-
-	req := hp.newRequest(op, nil, input, output)
-	return output, req.Send()
-}
-
-// GetCertificates doc
-func (hp *Haproxy) GetHaproxyInfo(input *map[string]interface{}) (*map[string]interface{}, error) {
-	op := &cli.Operation{
-		HTTPMethod: "POST",
-		HTTPPath:   "/",
-	}
-
-	if input == nil {
-		input = &map[string]interface{}{}
-	}
-
-	output := &map[string]interface{}{}
-
-	req := hp.newRequest(op, nil, input, output)
-	return output, req.Send()
-}
-
-// ModifyDomainCertRequest doc
-func (hp *Haproxy) ModifyProxy(input *map[string]interface{}) (*map[string]interface{}, error) {
-	op := &cli.Operation{
-		HTTPMethod: "POST",
-		HTTPPath:   "/",
-	}
-
-	if input == nil {
-		input = &map[string]interface{}{}
-	}
-
-	output := &map[string]interface{}{}
-
-	req := hp.newRequest(op, nil, input, output)
+	req := hp.NewRequest(op, nil, payload.Bytes(), output)
 	return output, req.Send()
 }

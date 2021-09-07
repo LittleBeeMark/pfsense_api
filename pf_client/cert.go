@@ -197,6 +197,7 @@ func ImportCert() {
 		ClientID    string `json:"client-id"`
 		ClientToken string `json:"client-token"`
 		Method      string `json:"method"`
+		ID          string `json:"id"`
 		Cert        string `json:"cert"`
 		Key         string `json:"key"`
 		Descr       string `json:"descr"`
@@ -206,8 +207,9 @@ func ImportCert() {
 		ClientToken: cl.ClientToken,
 		Cert:        base64.StdEncoding.EncodeToString([]byte(mCert)),
 		Key:         base64.StdEncoding.EncodeToString([]byte(mKey)),
-		Method:      "import",
-		Descr:       "testcert",
+		Method:      "edit",
+		ID:          "6136cfbfdca6d",
+		Descr:       "aaa",
 		Active:      true,
 	}
 
@@ -252,7 +254,8 @@ func ReadCerts() {
 		Cert []interface{} `json:"cert"`
 	}{}
 
-	err = cl.Request(context.Background(), http.MethodGet, "/system/certificate", "", bytes.NewReader(reqB), &resp)
+	err = cl.Request(context.Background(), http.MethodGet, "/system/certificate",
+		"", bytes.NewReader(reqB), &resp)
 	if err != nil {
 		fmt.Println("req err:", err)
 	}
@@ -269,6 +272,8 @@ func ReadCerts() {
 			if err != nil {
 				return
 			}
+
+			fmt.Println("cert : ", cert)
 		}
 	}
 }

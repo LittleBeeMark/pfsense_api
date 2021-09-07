@@ -1,13 +1,18 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
+	"regexp"
+	"strings"
 )
 
-// SendAction dco
+// ========================================= Send ======================================
+
+// SendAction doc
 var SendAction = NamedAction{
 	Name: "pfsense.SendAction",
 	Fn: func(r *Request) {
@@ -58,32 +63,127 @@ func handleSendError(r *Request, err error) {
 
 }
 
-var windowBuilAction = NamedAction{
-	Name: "pfsense.windowBuilAction",
+// ================================================== unmarshal  ===================================
+
+const (
+	RespInfoCSRF      = "Csrf"
+	RespInfoSetCookie = "SetCookie"
+)
+
+// PfSenseAPIResp pfSense API 接口返出结构
+type PfSenseAPIResp struct {
+	Status  string      `json:"status"`
+	Code    int         `json:"code"`
+	Return  int         `json:"return"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
+	Error   string      `json:"error"`
+}
+
+var UnmarshalAPIBasic = NamedAction{
+	Name: "pfsense.unmarshalBasic",
 	Fn: func(r *Request) {
-		sender := sendFollowRedirects
-		if r.DisableFollowRedirects {
-			sender = sendWithoutFollowRedirects
-		}
-		var err error
-		r.HTTPResponse, err = sender(r)
+		defer r.HTTPResponse.Body.Close()
+
+		bodyBuf, err := ioutil.ReadAll(r.HTTPResponse.Body)
 		if err != nil {
-			handleSendError(r, err)
+			r.Error = fmt.Errorf("unmashal read body err : %v", err)
+			return
 		}
+
+		resData := PfSenseAPIResp{
+			Data: r.Data,
+		}
+
+		err = json.Unmarshal(bodyBuf, &resData)
+		if err != nil {
+			r.Error = fmt.Errorf("unmarshal API  output(%s) info to data err : %v", string(bodyBuf), err)
+			return
+		}
+		//fmt.Println(string(bodyBuf))
+		//fmt.Printf("resp : %+v\n", resData.Data)
+
 	},
 }
 
-var apiBuilAction = NamedAction{
-	Name: "pfsense.windowBuilAction",
+// unmarshalIndexRespAction dco
+var unmarshalIndexRespAction = NamedAction{
+	Name: "pfsense.unmarshalIndexResp",
 	Fn: func(r *Request) {
-		sender := sendFollowRedirects
-		if r.DisableFollowRedirects {
-			sender = sendWithoutFollowRedirects
-		}
-		var err error
-		r.HTTPResponse, err = sender(r)
+		defer r.HTTPResponse.Body.Close()
+
+		bodyBuf, err := ioutil.ReadAll(r.HTTPResponse.Body)
 		if err != nil {
-			handleSendError(r, err)
+			r.Error = fmt.Errorf("unmashal read body err : %v", err)
+			return
+		}
+		//fmt.Println("string resp :", string(bodyBuf))
+
+		rel := regexp.MustCompile(`var csrfMagicToken = "(.*)";var csrfMagicName = "__csrf_magic"`)
+		ress := rel.FindAllString(string(bodyBuf), -1)
+		if len(ress) <= 0 {
+			r.Error = fmt.Errorf("未找到 index 页的 Crsf")
+			return
+		}
+
+		setCookie := r.HTTPResponse.Header.Get("Set-Cookie")
+		if setCookie == "" {
+			r.Error = fmt.Errorf("未找到 index 页的 Set-Cookie")
+			return
+		}
+
+		out := map[string]interface{}{
+			RespInfoCSRF:      rel.ReplaceAllString(ress[0], "$1"),
+			RespInfoSetCookie: strings.Split(setCookie, ";")[0],
+		}
+
+		outRaw, err := json.Marshal(out)
+		if err != nil {
+			r.Error = fmt.Errorf("marshal index output info err : %v", err)
+			return
+		}
+
+		err = json.Unmarshal(outRaw, &r.Data)
+		if err != nil {
+			r.Error = fmt.Errorf("unmarshal index output info to data err : %v", err)
+			return
+		}
+
+	},
+}
+
+// unmarshalLoginRespAction dco
+var unmarshalLoginRespAction = NamedAction{
+	Name: "pfsense.marshalIndexResp",
+	Fn: func(r *Request) {
+		defer r.HTTPResponse.Body.Close()
+		//bodyBuf, err := ioutil.ReadAll(r.HTTPResponse.Body)
+		//if err != nil {
+		//	r.Error = fmt.Errorf("unmashal read body err : %v", err)
+		//	return
+		//}
+		//fmt.Println("login string resp ==================================:", string(bodyBuf))
+
+		setCookie := r.HTTPResponse.Header.Get("Set-Cookie")
+		if setCookie == "" {
+			r.Error = fmt.Errorf("未找到登录成功页的 Set-Cookie")
+			return
+		}
+		fmt.Println("login set cookie : ", r.HTTPResponse.Header.Get("Set-Cookie"))
+		out := map[string]interface{}{
+			RespInfoSetCookie: strings.Split(setCookie, ";")[0],
+		}
+
+		outRaw, err := json.Marshal(out)
+		if err != nil {
+			r.Error = fmt.Errorf("marshal login output info err : %v", err)
+			return
+		}
+
+		err = json.Unmarshal(outRaw, &r.Data)
+		if err != nil {
+			r.Error = fmt.Errorf("unmarshal login output info to data err : %v", err)
+			return
 		}
 	},
 }

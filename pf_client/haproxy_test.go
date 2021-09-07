@@ -18,7 +18,7 @@ func TestIndex(t *testing.T) {
 }
 
 func TestGetHaproxyList(t *testing.T) {
-	GetHaproxyList("PHPSESSID=08bb921a358242308f6c21a6d7d5b13c")
+	GetHaproxyList("PHPSESSID=5fa1244328b0d2acb5023b95866720d4")
 
 }
 

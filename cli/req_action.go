@@ -1,13 +1,12 @@
 package cli
 
 type ReqAction struct {
-	Build          Action
 	Send           Action
 	Unmarshal      Action
 	UnmarshalError Action
 }
 
-//  Action doc
+// Action doc
 type Action struct {
 	list []NamedAction
 }

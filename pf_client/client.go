@@ -158,6 +158,7 @@ func (prov *Cl) Request(ctx context.Context,
 		Data: resp,
 	}
 
+	fmt.Println(string(respBuf))
 	//fmt.Println("respBuf ", string(respBuf))
 	err = json.Unmarshal(respBuf, result)
 	if err != nil {
