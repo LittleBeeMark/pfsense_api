@@ -8,14 +8,13 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"regexp"
-	"strings"
 )
 
 // ========================================= Send ======================================
 
 // SendAction doc
 var SendAction = NamedAction{
-	Name: "pfsense.SendAction",
+	Name: SendBasic,
 	Fn: func(r *Request) {
 		sender := sendFollowRedirects
 		if r.DisableFollowRedirects {
@@ -66,11 +65,6 @@ func handleSendError(r *Request, err error) {
 
 // ================================================== unmarshal  ===================================
 
-const (
-	RespInfoCSRF      = "Csrf"
-	RespInfoSetCookie = "SetCookie"
-)
-
 // PfSenseAPIResp pfSense API 接口返出结构
 type PfSenseAPIResp struct {
 	Status  string      `json:"status"`
@@ -81,12 +75,13 @@ type PfSenseAPIResp struct {
 	Error   string      `json:"error"`
 }
 
-var UnmarshalAPIBasic = NamedAction{
-	Name: "pfsense.unmarshalBasic",
+var UnmarshalAPIBasicAction = NamedAction{
+	Name: UnmarshalAPIBasic,
 	Fn: func(r *Request) {
 		defer r.HTTPResponse.Body.Close()
 
-		bodyBuf, err := ioutil.ReadAll(r.HTTPResponse.Body)
+		var err error
+		r.RespBody, err = ioutil.ReadAll(r.HTTPResponse.Body)
 		if err != nil {
 			r.Error = fmt.Errorf("unmashal read body err : %v", err)
 			return
@@ -96,18 +91,33 @@ var UnmarshalAPIBasic = NamedAction{
 			Data: r.Data,
 		}
 
-		err = json.Unmarshal(bodyBuf, &resData)
+		err = json.Unmarshal(r.RespBody, &resData)
 		if err != nil {
-			r.Error = fmt.Errorf("unmarshal API  output(%s) info to data err : %v", string(bodyBuf), err)
+			r.Error = fmt.Errorf("unmarshal API  output(%s) info to data err : %v",
+				string(r.RespBody), err)
 			return
 		}
-		//fmt.Println(string(bodyBuf))
-		//fmt.Printf("resp : %+v\n", resData.Data)
-
 	},
 }
 
-// GetCsrInfo doc
+// UnmarshalBasicAction doc
+var UnmarshalBasicAction = NamedAction{
+	Name: UnmarshalBasic,
+	Fn: func(r *Request) {
+		defer r.HTTPResponse.Body.Close()
+
+		var err error
+		r.RespBody, err = ioutil.ReadAll(r.HTTPResponse.Body)
+		if err != nil {
+			r.Error = fmt.Errorf("unmashal read body err : %v", err)
+			return
+		}
+
+		//fmt.Println("basic body : ", string(r.RespBody))
+	},
+}
+
+// GetCsrfInfo doc
 func GetCsrfInfo(html string) (string, error) {
 	rel := regexp.MustCompile(`var csrfMagicToken = "(.*)";var csrfMagicName = "__csrf_magic"`)
 	ress := rel.FindAllString(html, -1)
@@ -120,18 +130,18 @@ func GetCsrfInfo(html string) (string, error) {
 
 // unmarshalIndexRespAction dco
 var unmarshalIndexRespAction = NamedAction{
-	Name: "pfsense.unmarshalIndexResp",
+	Name: UnmarshalIndex,
 	Fn: func(r *Request) {
 		defer r.HTTPResponse.Body.Close()
 
-		bodyBuf, err := ioutil.ReadAll(r.HTTPResponse.Body)
+		var err error
+		r.RespBody, err = ioutil.ReadAll(r.HTTPResponse.Body)
 		if err != nil {
 			r.Error = fmt.Errorf("unmashal read body err : %v", err)
 			return
 		}
 		//fmt.Println("string resp :", string(bodyBuf))
-
-		csrf, err := GetCsrfInfo(string(bodyBuf))
+		csrf, err := GetCsrfInfo(string(r.RespBody))
 		if err != nil {
 			r.Error = err
 			return
@@ -143,9 +153,9 @@ var unmarshalIndexRespAction = NamedAction{
 			return
 		}
 
-		out := map[string]interface{}{
-			RespInfoCSRF:      csrf,
-			RespInfoSetCookie: strings.Split(setCookie, ";")[0],
+		out := IndexResp{
+			csrf,
+			setCookie,
 		}
 
 		outRaw, err := json.Marshal(out)
@@ -159,30 +169,30 @@ var unmarshalIndexRespAction = NamedAction{
 			r.Error = fmt.Errorf("unmarshal index output info to data err : %v", err)
 			return
 		}
-
 	},
 }
 
 // unmarshalLoginRespAction dco
 var unmarshalLoginRespAction = NamedAction{
-	Name: "pfsense.marshalIndexResp",
+	Name: UnmarshalLogin,
 	Fn: func(r *Request) {
 		defer r.HTTPResponse.Body.Close()
-		//bodyBuf, err := ioutil.ReadAll(r.HTTPResponse.Body)
-		//if err != nil {
-		//	r.Error = fmt.Errorf("unmashal read body err : %v", err)
-		//	return
-		//}
-		//fmt.Println("login string resp ==================================:", string(bodyBuf))
+
+		var err error
+		r.RespBody, err = ioutil.ReadAll(r.HTTPResponse.Body)
+		if err != nil {
+			r.Error = fmt.Errorf("unmashal read body err : %v", err)
+			return
+		}
 
 		setCookie := r.HTTPResponse.Header.Get("Set-Cookie")
 		if setCookie == "" {
 			r.Error = fmt.Errorf("未找到登录成功页的 Set-Cookie")
 			return
 		}
-		fmt.Println("login set cookie : ", r.HTTPResponse.Header.Get("Set-Cookie"))
-		out := map[string]interface{}{
-			RespInfoSetCookie: strings.Split(setCookie, ";")[0],
+
+		out := LoginResp{
+			setCookie,
 		}
 
 		outRaw, err := json.Marshal(out)

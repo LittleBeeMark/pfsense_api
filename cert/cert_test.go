@@ -2,87 +2,98 @@ package cert
 
 import (
 	"fmt"
-	"pfsense/cli"
-	"strings"
 	"testing"
-
-	"github.com/PuerkitoBio/goquery"
 )
 
-func TestCert_GetCertList(t *testing.T) {
-	//cookie, err := cli.GetLoginCookie()
-	//if err != nil {
-	//	fmt.Println("err : ", err)
-	//	return
-	//}
+var cert = `-----BEGIN CERTIFICATE-----
+MIIDrjCCApagAwIBAgIIQ8oXahfGbVswDQYJKoZIhvcNAQELBQAwejELMAkGA1UE
+BhMCQ04xFzAVBgNVBAoTDktleU1hbmFnZXIub3JnMTEwLwYDVQQLEyhLZXlNYW5h
+Z2VyIFRlc3QgUm9vdCAtIEZvciBUZXN0IFVzZSBPbmx5MR8wHQYDVQQDExZLZXlN
+YW5hZ2VyIFRlc3QgUlNBIENBMB4XDTIxMDkwODEwNTIzOVoXDTIyMDkwODEwNTIz
+OVowJTELMAkGA1UEBhMCQ04xFjAUBgNVBAMTDXBmc2Vuc2VoYS5jb20wggEiMA0G
+CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQC6In4lNLkBgJ3fj7QMy9xwRIkE8N1E
+++QYC2gJ0wSyP9oOBUm8g/5myAcJfxt639yBe6scArwySGo4BUGWdBPqbF9pJkHQ
+GhEkAFi+VomIQ7Qy3zfIS9N9O0VPC/zJ9iROxhpuRABZee72jhdE0bnA87E43F0H
+wafNtc2xB31ZenjVfle/LwMiNH/l1O0JU+rHHmVA7Xq+qOvEBQK/0xwQ1PWsp26z
+j9BtNRZlAiKTZoy+ONbhcsP5HJ9T40o3gRyzby3pdL+ET8JZYjTfD90/kHQEIaF7
+Nk86eMiVzi/d9Fz8NM/vrkhmbdlWQ6v5IGmobTf49D1MtU9K6U7mHDnVAgMBAAGj
+gYwwgYkwDgYDVR0PAQH/BAQDAgWgMB0GA1UdJQQWMBQGCCsGAQUFBwMBBggrBgEF
+BQcDAjAdBgNVHQ4EFgQUcq11C5MgMxVdulcMg9oQNmHJhrowHwYDVR0jBBgwFoAU
+ECM+bgg+elE+HXbkMaIApFqFmZIwGAYDVR0RBBEwD4INcGZzZW5zZWhhLmNvbTAN
+BgkqhkiG9w0BAQsFAAOCAQEAaqc8wqIL0Mo8fveChnQjk7K8S2XFDrgTedhuT45g
+TNs8WowAq13qdGKjRJ6o75cFEUyZ1jxqPoyXKhpSSRwhSeFmnvtNjRx3hvqO65bY
+u/DHcuwKNYhPUM8difBG77NBhOiYDErCP4yT7ix7EiDf8I8X9ncw2cqG+jmqTn8W
+MxgZ03vfr15VXIrTMFB1GVrCcxtY//v3ofCD47XxXSEzy4lZDmDxLy+YB+fjynpL
+5twoNH5BIAmkcvL3rcTDSanTRE3SGhqovisKdQcsK6J1vU2yahlrmxGPlUmLUe5i
+j08+qHKd29RcwL3kAb00zywriY22LM2y/zK/eeshp+q34g==
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIID2jCCAsKgAwIBAgIIeSI3M4rCCEswDQYJKoZIhvcNAQELBQAwezELMAkGA1UE
+BhMCQ04xFzAVBgNVBAoTDktleU1hbmFnZXIub3JnMTEwLwYDVQQLEyhLZXlNYW5h
+Z2VyIFRlc3QgUm9vdCAtIEZvciBUZXN0IFVzZSBPbmx5MSAwHgYDVQQDExdLZXlN
+YW5hZ2VyIFRlc3QgUm9vdCBDQTAeFw0yMTA3MTQwNTEyMDBaFw0zMTA3MTQwNTEy
+MDBaMHoxCzAJBgNVBAYTAkNOMRcwFQYDVQQKEw5LZXlNYW5hZ2VyLm9yZzExMC8G
+A1UECxMoS2V5TWFuYWdlciBUZXN0IFJvb3QgLSBGb3IgVGVzdCBVc2UgT25seTEf
+MB0GA1UEAxMWS2V5TWFuYWdlciBUZXN0IFJTQSBDQTCCASIwDQYJKoZIhvcNAQEB
+BQADggEPADCCAQoCggEBANgs0N+IrziLtph3gDHpapH7Wn4moycKDi9ymb5FHBpj
+Gs2TRIn7uJMhFbAJklcdN9usbXjgWkmP2oFdfTJsQQyvF8KcNpSL8OMSS8zy79sU
+jV+VvW0w0Uv43lBrPVkXF2c2AhkguWFb5DjunFxBCY5PnEVUP3wYBOsJW6HCvUx8
+tuICkfBudOvf612YtEixA2GAig6kviTDrxBbN2QsrrnZEyaAnR6+rDAbLzmVK+Px
+a6JxbTQlC+qrjDV/o09XnbLWtVE8U67D4IhYfT0HIsugTRGUIkff49CQrAEZ0/pi
+RWln7KSoM+rDeDp08ORWZsQ7Mx5G//Zep6evhQuCnWcCAwEAAaNjMGEwDgYDVR0P
+AQH/BAQDAgGGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFBAjPm4IPnpRPh12
+5DGiAKRahZmSMB8GA1UdIwQYMBaAFPKcEGuzWGA4xJynrNCqlL6+wFpQMA0GCSqG
+SIb3DQEBCwUAA4IBAQA7r6WhiJerQweBsL+sUaPti1O5cR30lpw7YxhGERQsik7h
+pRhc9tE+PWGzepBhx1tN9pq8N9lS+Mbcx2oOJOc8e1RPd3q3meU76868OuTSKtD+
+mV3pcJ+rnbWr2pD1FWu5GDn1/5cmpNXotha+pWIZpGJ8lVtrhJCwmH9hUFFkxKr/
+dXsis03TzIcbH5fyiJJOIXf77IunzFIgmwA4wBLOD+aRPP1wMa2Q/dagbvzRbx5g
+sFw0xuJyZInrpC7czwz8AK2NLCbzeMLQL5HvQu71AhqysXQDBFZjdAQ2IEC8ZMsq
+ew6BXkqiZDA5jg05jQSGydiIedO1ScXfyd8nMZls
+-----END CERTIFICATE-----
+`
 
-	c := NewCert(cli.UserName, cli.Password, cli.EndPoint)
+var key = `-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAuiJ+JTS5AYCd34+0DMvccESJBPDdRPvkGAtoCdMEsj/aDgVJ
+vIP+ZsgHCX8bet/cgXurHAK8MkhqOAVBlnQT6mxfaSZB0BoRJABYvlaJiEO0Mt83
+yEvTfTtFTwv8yfYkTsYabkQAWXnu9o4XRNG5wPOxONxdB8GnzbXNsQd9WXp41X5X
+vy8DIjR/5dTtCVPqxx5lQO16vqjrxAUCv9McENT1rKdus4/QbTUWZQIik2aMvjjW
+4XLD+RyfU+NKN4Ecs28t6XS/hE/CWWI03w/dP5B0BCGhezZPOnjIlc4v3fRc/DTP
+765IZm3ZVkOr+SBpqG03+PQ9TLVPSulO5hw51QIDAQABAoIBAFPIENW4bInjlaw6
+Z8XWwSt7fd1OeZqCcwHrqHG7nQKKwSDMeoszMoCbCqfYocrmFr/lpXhfNsy/UahT
+nVkWeJxtGWkgAkGkahC1YzyRgShnqSW42cf7cX+N/T1+XNOfSmp2uxDk5O9hdhFe
+ldSxPhY+2oeIkQtbvKdYbPSBNYffVbSJp93PzCXZvwGsvcVtJEZ9LkSIaJV1QDmc
+Dew2Mhfq6h1Ek9WNTCQgPLJjACBbf708XDX31iAi7SOqPW1Jhq1uDdYqyoJmhGuP
+O6ytRs6byx0EZfyOQEH0oVVtY/Ajp4d/svvh6983Twuv9O6oI4ySlT8imWJM8G/n
+Aem55EECgYEA9h5S97uvg2xVPYAAPsPAEa+RPWoOmL/rFDC2nCI48/W2o1SmcRA4
+vR+KkHh9TlxVanxAFj2kjkYS+xh3MoiAx1vmZ8BDeFHj0Sub3vu2009F6eFlkpWC
+AnV7mRVt/TipqlIHHflr7qEEyrHWDym2MvZEuTCnpq3XS3f9Fv2342UCgYEAwZuj
+jE/nhFAe1DBbh0L1G50ziY8c58I0Fg0p+TuHM2DFJMFaGSfbJNI0tWfq7JtJZx87
+VAdRltFpP15FVai+o6Vw/BF+0jiVPlYoXyyyZ0HIk42hBEaGjLn6LixWgESjCWuE
+/E/utjO8S/rzTe/WFSgubsg7KGzGBZZEOeoubbECgYEA8ve4vGwCtuFpvQ7yLwQc
+RtllrpVW16EPN51niPeX9e8qYE+fCJsVCE9tAXaRbZxljnwe4FX2b6Xp8wySD8cG
+KskkymPZt5xQJRzCAf3I3Q6zXFJxbaY+9KJ6ZAPt0z/u7v+Pmx2yWZ+IFXo+cjWh
+cun/qjrIJxoTIqPPrLTIpqkCgYBntxyx+cwokVMykIU3vKLZnCkTs9rkPKDyfzLR
+FRaka16xBfNiLnuzCfi6hWTQQ4/a8lwx84m9pYkgLTwvWyplOCeCoUyzCSTKNBWE
+hsk7j34HrYNoau+BS8++FHpyVFKSpUqkb52NdcGVYmYchjLFOrVFG3a1fS/Hpmv+
+KnmcwQKBgQDyk/6WqeCamkpJVj1WcjvFpkGRIa2j57M5UeV+vz6p2Pmm5q3sKhmC
+0DiZlaZiMAy7ZwnMflrNJCgrtq8O7TSDsfPj2xn4p69EkV5qmIis2y0L0WVS7AX6
+ah0UiwtmMgXWgqwS/WcuxZN4SZuP9XNhgqHz6rYJcsq5JqdNIru47A==
+-----END RSA PRIVATE KEY-----`
 
-	op, err := c.GetCertList()
+func TestEditPfSenseCert(t *testing.T) {
+	param := &EditCertParam{
+		UserName: "admin",
+		Password: "pfsense",
+		EndPoint: "https://192.168.252.183",
+		CertID:   "613356ef7ac58",
+		Cert:     cert,
+		Key:      key,
+	}
+
+	err := EditPfSenseCert(param)
 	if err != nil {
-		fmt.Println("err : ", err)
+		fmt.Println("Err : ", err)
 		return
 	}
 
-	fmt.Println(op)
-}
-
-func TestCert_EditCertPage(t *testing.T) {
-	cookie, err := cli.GetLoginCookie()
-	if err != nil {
-		fmt.Println("err : ", err)
-		return
-	}
-
-	c := NewCert(cli.UserName, cli.Password, cli.EndPoint)
-	op, err := c.EditCertPage("613356ef7ac58", cookie)
-	if err != nil {
-		fmt.Println("err : ", err)
-		return
-	}
-
-	fmt.Println(op)
-
-}
-
-func Test_GETDescr(t *testing.T) {
-	reader, err := goquery.NewDocumentFromReader(strings.NewReader(html))
-	if err != nil {
-		fmt.Println("err : ", err)
-		return
-	}
-
-	reader.Find("input#descr").Attr("value")
-	//if b {
-	//	fmt.Println(val)
-	//}
-
-}
-
-const (
-	FollowingError = "The following input errors were detected"
-)
-
-func TestCert_EditCert(t *testing.T) {
-	cookie, err := cli.GetLoginCookie()
-	if err != nil {
-		fmt.Println("err : ", err)
-		return
-	}
-
-	c := NewCert(cli.UserName, cli.Password, cli.EndPoint)
-	op, err := c.EditCertPage("613356ef7ac58", cookie)
-	if err != nil {
-		fmt.Println("err edit: ", err)
-		return
-	}
-
-	c = NewCert(cli.UserName, cli.Password, cli.EndPoint)
-	resp, err := c.EditCert(op.CSRF, op.Descr, cookie, "613356ef7ac58")
-	if err != nil {
-		fmt.Println("err : ", err)
-		return
-	}
-
-	fmt.Println(resp)
 }

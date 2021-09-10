@@ -2,10 +2,15 @@ package haproxy
 
 import (
 	"bytes"
-	"crypto/tls"
 	"mime/multipart"
-	"net/http"
 	"pfsense/cli"
+	"strconv"
+)
+
+var (
+	UserName string = "admin"
+	Password string = "pfsense"
+	EndPoint string = "https://192.168.252.183"
 )
 
 // Haproxy doc
@@ -20,26 +25,51 @@ func NewHaproxy(userName, password, endPoint string) *Haproxy {
 	}
 }
 
+// ListResp doc
+type ListResp struct {
+	CSRF       string   `json:"csrf"`
+	FrontNames []string `json:"front_names"`
+}
+
 // GetHaproxyList doc
-func (hp *Haproxy) GetHaproxyList(cookie string) (*map[string]interface{}, error) {
+func (hp *Haproxy) GetHaproxyList(cookie string) (*ListResp, error) {
 	op := &cli.Operation{
 		HTTPMethod: "GET",
 		HTTPPath:   "/haproxy/haproxy_listeners.php",
 		Cookie:     cookie,
 	}
 
-	hp.ReqActions.Unmarshal.PushBackNamed(unmarshalHaproxyListRespAction)
-	hp.CliInfo.HTTPClient = &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true},
-		}}
+	hp.ReqActions.Unmarshal.PushBackNamed(unmarshalHaproxyListNameRespAction)
+	hp.ReqActions.UnmarshalError.PushBackNamed(cli.UnmarshalErrPageBasicAction)
+	hp.CliInfo.SetHTTPClient(nil)
 
-	output := &map[string]interface{}{}
+	output := &ListResp{}
 
 	req := hp.NewRequest(op, nil, nil, output)
 	return output, req.Send()
+}
+
+// RefreshHaproxy doc
+func (hp *Haproxy) RefreshHaproxy(csrf, cookie string) error {
+	op := &cli.Operation{
+		HTTPMethod: "POST",
+		HTTPPath:   "/status_services.php",
+		Cookie:     cookie,
+	}
+
+	payload := &bytes.Buffer{}
+	writer := multipart.NewWriter(payload)
+	writer.WriteField("__csrf_magic", csrf)
+	writer.WriteField("ajax", "ajax")
+	writer.WriteField("mode", "restartservice")
+	writer.WriteField("service", "haproxy")
+	op.ContentType = writer.FormDataContentType()
+	op.ContentLen = strconv.Itoa(payload.Len())
+
+	hp.ReqActions.Unmarshal.PushBackNamed(cli.UnmarshalBasicAction)
+	hp.ReqActions.UnmarshalError.PushBackNamed(cli.UnmarshalErrPageBasicAction)
+	hp.CliInfo.SetHTTPClient(nil)
+	return hp.NewRequest(op, nil, payload.Bytes(), nil).Send()
 }
 
 // GetHaproxyInfo doc
@@ -74,27 +104,5 @@ func (hp *Haproxy) ModifyProxy(param *ModifyParamReq) (*map[string]interface{}, 
 	output := &map[string]interface{}{}
 
 	req := hp.NewRequest(op, nil, payload.Bytes(), output)
-	return output, req.Send()
-}
-
-// GetHaproxyListeners doc
-func (hp *Haproxy) GetHaproxyListeners(cookie string) (*map[string]interface{}, error) {
-	op := &cli.Operation{
-		HTTPMethod: "GET",
-		HTTPPath:   "/haproxy/haproxy_listeners.php",
-		Cookie:     cookie,
-	}
-
-	hp.ReqActions.Unmarshal.PushBackNamed(unmarshalHaproxyListRespAction)
-	hp.CliInfo.HTTPClient = &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true},
-		}}
-
-	output := &map[string]interface{}{}
-
-	req := hp.NewRequest(op, nil, nil, output)
 	return output, req.Send()
 }

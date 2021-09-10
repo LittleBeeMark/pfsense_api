@@ -6,6 +6,12 @@ type ReqAction struct {
 	UnmarshalError Action
 }
 
+// Clear doc
+func (ra *ReqAction) Clear() {
+	ra.Unmarshal.Clear()
+	ra.UnmarshalError.Clear()
+}
+
 // Action doc
 type Action struct {
 	list []NamedAction
@@ -17,35 +23,70 @@ type NamedAction struct {
 	Fn   func(*Request)
 }
 
-// PushBackNamed pushes named handler f to the back of the handler list.
-func (l *Action) PushBackNamed(n NamedAction) {
-	if cap(l.list) == 0 {
-		l.list = make([]NamedAction, 0, 5)
+// Action Name 大全
+const (
+	SendBasic             = "pfsense.SendBasicAction"
+	UnmarshalAPIBasic     = "pfsense.unmarshalAPIBasic"
+	UnmarshalBasic        = "pfsense.unmarshalBasic"
+	UnmarshalEditCertPage = "pfsense.unmarshalEditCertPageResp"
+
+	UnmarshalErrPageBasic    = "pfsense.unmarshalErrPageBasic"
+	UnmarshalHaproxyList     = "pfsense.unmarshalHaproxyListResp"
+	UnmarshalHaproxyNameList = "pfsense.unmarshalHaproxyNameListResp"
+	UnmarshalIndex           = "pfsense.unmarshalIndexResp"
+	UnmarshalLogin           = "pfsense.marshalLoginResp"
+)
+
+// Clear doc
+func (a *Action) Clear() {
+	a.list = a.list[0:0]
+}
+
+// Len doc
+func (a *Action) Len() int {
+	return len(a.list)
+}
+
+// PushBackNamed doc
+func (a *Action) PushBackNamed(n NamedAction) {
+	if cap(a.list) == 0 {
+		a.list = make([]NamedAction, 0, 5)
 	}
-	l.list = append(l.list, n)
+	a.list = append(a.list, n)
 }
 
-// PushFront pushes handler f to the front of the handler list.
-func (l *Action) PushFront(f func(*Request)) {
-	l.PushFrontNamed(NamedAction{"__anonymous", f})
-}
-
-// PushFrontNamed pushes named handler f to the front of the handler list.
-func (l *Action) PushFrontNamed(n NamedAction) {
-	if cap(l.list) == len(l.list) {
-		// Allocating new list required
-		l.list = append([]NamedAction{n}, l.list...)
+// PushFrontNamed doc
+func (a *Action) PushFrontNamed(n NamedAction) {
+	if cap(a.list) == len(a.list) {
+		a.list = append([]NamedAction{n}, a.list...)
 	} else {
-		// Enough room to prepend into list.
-		l.list = append(l.list, NamedAction{})
-		copy(l.list[1:], l.list)
-		l.list[0] = n
+		a.list = append(a.list, NamedAction{})
+		copy(a.list[1:], a.list)
+		a.list[0] = n
 	}
 }
 
-// Run executes all handlers in the list with a given request object.
-func (l *Action) Run(r *Request) {
-	for _, h := range l.list {
+// Remove doc
+func (a *Action) Remove(n NamedAction) {
+	a.RemoveByName(n.Name)
+}
+
+// RemoveByName doc
+func (a *Action) RemoveByName(name string) {
+	for i := 0; i < len(a.list); i++ {
+		m := a.list[i]
+		if m.Name == name {
+			copy(a.list[i:], a.list[i+1:])
+			a.list[len(a.list)-1] = NamedAction{}
+			a.list = a.list[:len(a.list)-1]
+			i--
+		}
+	}
+}
+
+// Run doc
+func (a *Action) Run(r *Request) {
+	for _, h := range a.list {
 		h.Fn(r)
 	}
 }

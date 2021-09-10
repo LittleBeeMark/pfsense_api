@@ -46,6 +46,7 @@ type Request struct {
 	HTTPResponse           *http.Response
 	Actions                ReqAction
 	ReqBody                []byte
+	RespBody               []byte
 	Error                  error
 	Data                   interface{}
 	DisableFollowRedirects bool
@@ -158,6 +159,7 @@ func (r *Request) Send() error {
 			r.Retryer.Count--
 			continue
 		}
+
 		return r.Error
 	}
 }
@@ -169,16 +171,14 @@ func (r *Request) sendRequest() (sendErr error) {
 		return r.Error
 	}
 
+	r.Actions.Unmarshal.Run(r)
 	if r.Error != nil {
-		r.Actions.UnmarshalError.Run(r)
 		// 日志
-
 		return r.Error
 	}
 
-	r.Actions.Unmarshal.Run(r)
+	r.Actions.UnmarshalError.Run(r)
 	if r.Error != nil {
-
 		// 日志
 		return r.Error
 	}

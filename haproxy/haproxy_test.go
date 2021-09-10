@@ -1,23 +1,7 @@
 package haproxy
 
-import (
-	"fmt"
-	"pfsense/cli"
-	"testing"
-)
+import "testing"
 
-func TestHaproxyList(t *testing.T) {
-	cookie, err := cli.GetLoginCookie()
-	if err != nil {
-		fmt.Println("err : ", err)
-		return
-	}
-
-	op, err := HaproxyList(cookie)
-	if err != nil {
-		fmt.Println("err : ", err)
-		return
-	}
-
-	fmt.Println(op)
+func TestHaproxy_GetHaproxyList(t *testing.T) {
+	GetHaproxyFrontNames(UserName, Password, EndPoint)
 }
