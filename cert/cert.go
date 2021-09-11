@@ -12,12 +12,12 @@ func GetPfSenseCertList(userName, password, endPoint string) ([]*PfCert, error) 
 
 // EditCertParam doc
 type EditCertParam struct {
-	UserName string
-	Password string
-	EndPoint string
-	CertID   string
-	Cert     string
-	Key      string
+	UserName string // 用户名
+	Password string // 用户密码
+	EndPoint string // pfsense 的部署ip 如：https://192.168.252.183
+	CertID   string // 需要更新证书的id ，可通过上面的获取证书列表方法获取
+	Cert     string // 证书 PEM
+	Key      string // 私钥 PEM
 }
 
 // EditPfSenseCert doc
